@@ -6,6 +6,8 @@ const BurpleSlider = () => {
   const [reange, setReange] = useState(0);
   const [colorBlocks, setColorBlocks] = useState([]);
   const [message, setMessage] = useState("What is Burple");
+  const [generatedText, setGeneratedText] = useState("");
+  const [uniqueIdentifier, setUniqueIdentifier] = useState(""); // State to store the unique identifier
 
   // Added state for blue, blink, and light pieen colors
   const [blueColor, setBlueColor] = useState(255);
@@ -48,10 +50,31 @@ const BurpleSlider = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const newColorBlock = getBackgroundColor();
-    setColorBlocks([...colorBlocks, newColorBlock]);
 
+    // Check if the color is not already present in colorBlocks
+    if (!colorBlocks.includes(newColorBlock)) {
+      setColorBlocks([...colorBlocks, newColorBlock]);
+    }
+
+    // Send the RGB values to the server and receive a unique identifier
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        rgbValues: colorBlocks,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setUniqueIdentifier(data.uniqueIdentifier);
+    }
+
+    // Update the message to guide the user to adjust a different color on the next submission.
     if (message === "What is Burple") {
       setMessage("What is Reange");
     } else if (message === "What is Reange") {
@@ -62,11 +85,19 @@ const BurpleSlider = () => {
       setMessage("What is Light Pieen");
     }
 
+    // Set isSubmitted to true.
     setIsSubmitted(true);
   };
 
   const handleBack = () => {
     setIsSubmitted(false);
+    setUniqueIdentifier(""); // Reset the unique identifier when going back
+  };
+
+  const handleGenerate = () => {
+    // Generate the text content with RGB values
+    const textContent = colorBlocks.map((block) => `RGB Value: ${block}`).join("\n");
+    setGeneratedText(textContent);
   };
 
   const getButtons = () => {
@@ -75,6 +106,7 @@ const BurpleSlider = () => {
         <p style={{ color: "white", textAlign: "center", fontWeight: "bold", fontSize: "1.5rem" }}>{message}?</p>
         <button type="button" onClick={handleBack} style={{ marginRight: "10px" }}>Back</button>
         <button type="submit" onClick={handleSubmit}>Submit</button>
+        <button type="button" onClick={handleGenerate} style={{ marginLeft: "10px" }}>Generate</button>
       </div>
     );
   };
@@ -97,6 +129,20 @@ const BurpleSlider = () => {
           </div>
         ))}
       </div>
+      <div style={{ marginTop: "20px" }}>
+        <textarea
+          readOnly
+          rows="5"
+          cols="30"
+          value={generatedText}
+          style={{ display: "block", margin: "auto" }}
+        />
+      </div>
+      {uniqueIdentifier && (
+        <div style={{ marginTop: "20px", color: "white", textAlign: "center", fontWeight: "bold" }}>
+          Your Unique Identifier: {uniqueIdentifier}
+        </div>
+      )}
     </div>
   );
 };
